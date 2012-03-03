@@ -8,3 +8,4 @@ Ver.0 A one-line batch script
 Ver.1 An imporoved batch script
 Ver.3 Generates a batch script with VBScript
 Ver.4 Automatically removes given keywords
+Ver.5 Write replaced results back into CSV file
