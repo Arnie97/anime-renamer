@@ -1,58 +1,73 @@
 Option Explicit
 'On Error Resume Next
 
-Const strInfo = "[GB]/[BIG5]/[Jp/Cn]/[720p]/[480p]/[1280x720]/[848x480]/[RV10]/XviD/V2/V3/amp;/.[CASO&SumiSora]/.[SumiSora&Ktxp]/[]"
-Dim objWSH, objFSO
+Dim objWSH, objFSO, objTextStream, strPath, strList, strInfo
 Set objWSH = CreateObject("WScript.Shell")
 Set objFSO = CreateObject("Scripting.FileSystemObject")
+strPath = objFSO.GetParentFolderName(WScript.ScriptFullName)
+strList = strPath & "\Rename.CSV"
+strInfo = "GB/BIG5/Jp/Cn/720p/576p/480p/360p/1280x720/1024x576/848x480/840x480/720x480/720x396/624x352/RV10/624X352/640X480/V2/V3/SumiSora/CASO/POPGO/EMD/Ktxp/jump/BTPIG/ZMPIG/DMG/DmzJ/www.dy2018.com/www.dygod.net/µÁ”∞ÃÏÃ√/&amp;/%26/_SP/_BF/_baofeng/x264/H264/H.264/XviD/DviX/DVDRip/DVD/flac/aac/AC3/_mp3/.[&]/[_]/[&]/[]/()"
 
 List
-Spreadsheet
+Rename
 MsgBox "Rename operations sucessfully completed!", vbOKOnly + vbInformation, "Arnie's TV Animation Renamer"
 
 Private Sub List()
-	Dim objExec, objTextStream, strLine, strClipboard
-	If objFSO.FileExists("Rename.CMD") Or objFSO.FileExists("Rename.CSV") Then
-		objFSO.DeleteFile("Rename.C*")
-	End If
-	Set objExec = objWSH.Exec("cmd.exe /c dir /b *.mp4 *.mkv *.rmvb *.avi")
-	Set objTextStream = objFSO.OpenTextFile("Rename.CSV", ForWriting, True)
-	With objTextStream
-		.WriteLine "@Echo Off"
-		Do While Not objExec.StdOut.AtEndOfStream
-			strLine = objExec.StdOut.ReadLine
-			strClipboard = AutoTrim(strLine, strInfo)
-			strLine = "Ren \," & strLine & ",/," & strClipboard & ",\"
-			.WriteLine strLine
-			strLine = vbNullString
-		Loop
-		.WriteLine "Del Rename.CMD"
+	Dim objFile, objFiles, strArgs
+	With objFSO
+		If .FileExists(strList) Then
+			.DeleteFile(strList)
+		End If
+		Set objFiles = .GetFolder(strPath).Files
+		Set objTextStream = .OpenTextFile(strList, 2, True)
+		For Each objFile In objFiles
+			If Not InStr("/rm/rmvb/mkv/mp4/avi/mp3/", "/" & _
+				.GetExtensionName(objFile.Name) & "/") = 0 Then
+				objTextStream.WriteLine objFile.Name & ", /" & AutoTrim(objFile.Name)
+			End If
+		Next
+		Set objTextStream = Nothing
 	End With
-	Set objTextStream = Nothing
-	SetClipboard strClipboard
 End Sub
 
-Private Sub SpreadSheet()
-	Dim objTextStream, strAll
-	objWSH.Run "Rename.CSV", vbMaximizedFocus, True
-	objFSO.MoveFile "Rename.CSV", "Rename.CMD"
-	Set objTextStream = objFSO.OpenTextFile("Rename.CMD", ForReading, True)
-	strAll = objTextStream.ReadAll
-	strAll = Replace(strAll, "\", Chr(34), vbTextCompare)
-	strAll = Replace(strAll, "/", Chr(34) & Chr(32) & Chr(34), vbTextCompare)
-	strAll = Replace(strAll, ",", vbNullString)
-	Set objTextStream = objFSO.OpenTextFile("Rename.CMD", ForWriting, True)
-	objTextStream.Write(strAll)
-	Set objTextStream = Nothing
-	objWSH.Run "Rename.CMD", vbMinimizedNoFocus
+Private Sub Rename()
+	Dim strLine, strSource, strTarget, intOrder
+	With objFSO
+		objWSH.Run Chr(34) & strList & Chr(34), 3, True
+		Set objTextStream = .OpenTextFile(strList, 1, True)
+		Do While Not objTextStream.AtEndOfStream
+			strLine = objTextStream.ReadLine
+			strLine = Replace(strLine, ", ", "", vbTextCompare)
+			intOrder = InStr(strLine, "/")
+			strSource = Left(strLine, intOrder - 1)
+			strTarget = Right(strLine, Len(strLine) - intOrder)
+			strSource = .BuildPath(strPath, strSource)
+			If .FileExists(strSource) Then
+				If Not .GetFile(strSource).Name = strTarget Then
+					.GetFile(strSource).Name = strTarget
+				End If
+			End If
+		Loop
+		SetClipboard strTarget
+		Set objTextStream = Nothing
+		.DeleteFile strList, True
+	End With
 End Sub
 
 Private Function AutoTrim(strOriginal)
-	Dim strKeyword, strKeywords
+	Dim strKeyword, strKeywords, intOrder
 	AutoTrim = strOriginal
 	strKeyWords = Split(strInfo, "/", -1, vbTextCompare)
 	For Each strKeyword In strKeyWords
-		AutoTrim = Replace(AutoTrim, strKeyword, "", vbTextCompare)
+		Do
+			intOrder = InStr(LCase(AutoTrim), LCase(strKeyword))
+			If intOrder = 0 Then
+				Exit Do
+			Else
+				AutoTrim = Left(AutoTrim, intOrder - 1) & Right(AutoTrim, _
+					Len(AutoTrim) - Len(strKeyword) - intOrder + 1)
+			End If
+		Loop
 	Next
 End Function
 
