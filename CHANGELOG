@@ -10,3 +10,4 @@ Ver.3 Generates a batch script with VBScript
 Ver.4 Automatically removes given keywords
 Ver.5 Write replaced results back into CSV file
 Ver.6 Abandon batch script and rename directly by VBScript
+Ver.7 Parses command line arguments to support drag'n'drop
