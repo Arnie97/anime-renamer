@@ -1,19 +1,21 @@
 Option Explicit
 'On Error Resume Next
 
-Const strApp = "Arnie's Episode Renamer 7.7"
-Dim objWSH, objFSO, objTextStream, strPath, strInfo, strList
+Const strApp = "Arnie's Episode Renamer 8.2"
+Dim objWSH, objFSO, objTextStream, strPath, strList, strPattern, strInfo
 Set objWSH = CreateObject("WScript.Shell")
 Set objFSO = CreateObject("Scripting.FileSystemObject")
-strInfo = "GB/BIG5/Jp/Cn/720p/576p/480p/360p/1280x720/1024x576/848x480/840x480/720x480/720x396/624x352/RV10/624X352/640X480/V2/V3/SumiSora/CASO/POPGO/EMD/Ktxp/jump/BTPIG/ZMPIG/DMG/DmzJ/www.dy2018.com/www.dygod.net/电影天堂/&amp;/%26/_SP/_BF/_baofeng/x264/H264/H.264/XviD/DviX/DVDRip/DVD/flac/aac/AC3/_mp3/.[&]/[_]/[&]/[]/()"
-strList = objFSO.GetParentFolderName(WScript.ScriptFullName) & "\Rename.CSV"
+strList = "\Rename.CSV"
+strPattern = "(\[|\()([A-F0-9]){6,8}(\)|\])\.(\S+)"
+strInfo = "GB/BIG5/Jp/Cn/720p/576p/480p/360p/1280x720/1024x576/848x480/840x480/720x480/720x396/624x352/RV10/624X352/640X480/V2/V3/SumiSora/CASO/POPGO/EMD/Ktxp/MAGI_ATELIER/jump/BTPIG/ZMPIG/DMG/DmzJ/www.dy2018.com/www.dygod.net/电影天堂/www.piaohua.com/飘花电影/&amp;/%26/_SP/_BF/_baofeng/x264/H264/H.264/XviD/DviX/DVDRip/DVD/_flac/_aac/_ac3/_mp3/&/.[_]/[_]/.[]/[]/()"
 
 List
 Rename
 
 Private Sub List()
-	Dim objFile, objFiles, strArgs
+	Dim objFile, objFiles, strArgs, strClipboard
 	With objFSO
+		strList = .GetParentFolderName(WScript.ScriptFullName) & strList
 		If .FileExists(strList) Then
 			.DeleteFile(strList)
 		End If
@@ -32,11 +34,12 @@ Private Sub List()
 		Set objFiles = .GetFolder(strPath).Files
 		Set objTextStream = .OpenTextFile(strList, 2, True)
 		For Each objFile In objFiles
-			If Not InStr("/rm/rmvb/mkv/mp4/avi/mp3/", "/" & _
-				.GetExtensionName(objFile.Name) & "/") = 0 Then
-				objTextStream.WriteLine objFile.Name & ", /" & AutoTrim(objFile.Name)
+			If Not InStr("/rm/rmvb/mkv/mp4/avi/mp3/pdf/rar/zip/7z/ass/", "/" & .GetExtensionName(objFile.Name) & "/") = 0 Then
+				strClipboard = AutoTrim(objFile.Name)
+				objTextStream.WriteLine objFile.Name & ", /" & strClipboard
 			End If
 		Next
+		SetClipboard strClipboard
 		Set objTextStream = Nothing
 	End With
 End Sub
@@ -44,6 +47,8 @@ End Sub
 Private Sub Rename()
 	Dim strLine, strSource, strTarget, intOrder
 	With objFSO
+		strSource = .GetParentFolderName(WScript.ScriptFullName) & "\Spread32.exe"
+		strSource = .GetDriveName(WScript.ScriptFullName) & "\Applets\Applets\Spread32.exe"
 		objWSH.Run Chr(34) & strList & Chr(34), 3, True
 		Set objTextStream = .OpenTextFile(strList, 1, True)
 		Do While Not objTextStream.AtEndOfStream
@@ -59,7 +64,6 @@ Private Sub Rename()
 				End If
 			End If
 		Loop
-		SetClipboard strTarget
 		Set objTextStream = Nothing
 		.DeleteFile strList, True
 		Message(0)
@@ -67,7 +71,8 @@ Private Sub Rename()
 End Sub
 
 Private Function AutoTrim(strOriginal)
-	Dim strKeyword, strKeywords, intOrder
+	Dim objRegExp, strKeyword, strKeywords, intOrder
+	Set objRegExp = New RegExp
 	AutoTrim = strOriginal
 	strKeyWords = Split(strInfo, "/",  - 1, vbTextCompare)
 	For Each strKeyword In strKeyWords
@@ -76,27 +81,17 @@ Private Function AutoTrim(strOriginal)
 			If intOrder = 0 Then
 				Exit Do
 			Else
-				AutoTrim = Left(AutoTrim, intOrder - 1) & Right(AutoTrim, _
-					Len(AutoTrim) - Len(strKeyword) - intOrder + 1)
+				AutoTrim = Left(AutoTrim, intOrder - 1) & Right(AutoTrim, Len(AutoTrim) - Len(strKeyword) - intOrder + 1)
 			End If
 		Loop
 	Next
-End Function
-
-Private Function Hex2ASCII(strHex)
-	Dim strChr, intLoop, intChr
-	strHex = UCase(strHex)
-	For intLoop = 1 To Len(strHex)
-		strChr = Mid(strHex, Len(strHex) - intLoop + 1, 1)
-		Select Case strChr
-			Case "A", "B", "C", "D", "E", "F"
-				intChr = intChr + (Asc(strChr) - 65 + 10) * 16 ^ (intLoop - 1)
-			Case 1, 2, 3, 4, 5, 6, 7, 8, 9, 0
-				intChr = intChr + strChr * 16 ^ (intLoop - 1)
-			Case Else
-		End Select
-	Next
-	Hex2ASCII = ChrW(intChr)
+	With objRegExp
+		.Global = True
+		.IgnoreCase = True
+		.Pattern = strPattern
+		AutoTrim = .Replace(AutoTrim, ".$4")
+	End With
+	AutoTrim = Replace(AutoTrim, "].[", "][", vbTextCompare)
 End Function
 
 Private Sub SetClipboard(strText)
@@ -141,3 +136,19 @@ Private Sub Message(intMsg)
 			End Select
 	End Select
 End Sub
+
+Private Function Hex2ASCII(strHex)
+	Dim strChr, intLoop, intChr
+	strHex = UCase(strHex)
+	For intLoop = 1 To Len(strHex)
+		strChr = Mid(strHex, Len(strHex) - intLoop + 1, 1)
+		Select Case strChr
+			Case "A", "B", "C", "D", "E", "F"
+				intChr = intChr + (Asc(strChr) - 65 + 10) * 16 ^ (intLoop - 1)
+			Case 1, 2, 3, 4, 5, 6, 7, 8, 9, 0
+				intChr = intChr + strChr * 16 ^ (intLoop - 1)
+			Case Else
+		End Select
+	Next
+	Hex2ASCII = ChrW(intChr)
+End Function
