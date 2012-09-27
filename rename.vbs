@@ -1,13 +1,15 @@
 Option Explicit
 'On Error Resume Next
 
-Const strApp = "Arnie's Episode Renamer 8.2"
-Dim objWSH, objFSO, objTextStream, strPath, strList, strPattern, strInfo
+Const strApp = "Arnie's Episode Renamer 8.4"
+Dim objWSH, objFSO, objTextStream, strPath, strExt, strList, strLeavings, strPattern, strInfo
 Set objWSH = CreateObject("WScript.Shell")
 Set objFSO = CreateObject("Scripting.FileSystemObject")
+strExt = "/rm/rmvb/mkv/mp4/avi/mp3/tta/pdf/rar/zip/7z/ass/sub/"
 strList = "\Rename.CSV"
+strLeavings = "(\.)?(\[|\()(&|_|\.|~|-)*(\)|\])"
 strPattern = "(\[|\()([A-F0-9]){6,8}(\)|\])\.(\S+)"
-strInfo = "GB/BIG5/Jp/Cn/720p/576p/480p/360p/1280x720/1024x576/848x480/840x480/720x480/720x396/624x352/RV10/624X352/640X480/V2/V3/SumiSora/CASO/POPGO/EMD/Ktxp/MAGI_ATELIER/jump/BTPIG/ZMPIG/DMG/DmzJ/www.dy2018.com/www.dygod.net/电影天堂/www.piaohua.com/飘花电影/&amp;/%26/_SP/_BF/_baofeng/x264/H264/H.264/XviD/DviX/DVDRip/DVD/_flac/_aac/_ac3/_mp3/&/.[_]/[_]/.[]/[]/()"
+strInfo = "GB|BIG5|JP|CN|\d{3,4}p|\d{3,4}x\d{3,4}|RV10|(x|H|H\.)26\d|(v|x)[2-4]|SumiSora|CASO|POPGO|EMD|Ktxp|MAGI_ATELIER|jump|(BT|ZM)PIG|DMG|DmzJ|www\.\S+\.(com|net|org)(\.cn)?|电影天堂|飘花电影|6v电影|&amp;|%26|_BF|_baofeng|XviD|DviX|\[(RMVB|MKV|MP4)\]|(BD|DVD)(Rip)?|flac|aac|ac3|_mp3"
 
 List
 Rename
@@ -15,10 +17,6 @@ Rename
 Private Sub List()
 	Dim objFile, objFiles, strArgs, strClipboard
 	With objFSO
-		strList = .GetParentFolderName(WScript.ScriptFullName) & strList
-		If .FileExists(strList) Then
-			.DeleteFile(strList)
-		End If
 		If WScript.Arguments.Count = 0 Then
 			Message(1)
 		Else
@@ -31,12 +29,16 @@ Private Sub List()
 				Message(1)
 			End If
 		End If
+		strList = .GetParentFolderName(WScript.ScriptFullName) & strList
+		If .FileExists(strList) Then
+			.DeleteFile(strList)
+		End If
 		Set objFiles = .GetFolder(strPath).Files
 		Set objTextStream = .OpenTextFile(strList, 2, True)
 		For Each objFile In objFiles
-			If Not InStr("/rm/rmvb/mkv/mp4/avi/mp3/pdf/rar/zip/7z/ass/", "/" & .GetExtensionName(objFile.Name) & "/") = 0 Then
-				strClipboard = AutoTrim(objFile.Name)
-				objTextStream.WriteLine objFile.Name & ", /" & strClipboard
+			If Not InStr(strExt, "/" & .GetExtensionName(objFile.Name) & "/") = 0 Then
+				strClipboard = "/" & AutoTrim(objFile.Name)
+				objTextStream.WriteLine objFile.Name & ", " & strClipboard
 			End If
 		Next
 		SetClipboard strClipboard
@@ -71,27 +73,21 @@ Private Sub Rename()
 End Sub
 
 Private Function AutoTrim(strOriginal)
-	Dim objRegExp, strKeyword, strKeywords, intOrder
+	Dim objRegExp
 	Set objRegExp = New RegExp
 	AutoTrim = strOriginal
-	strKeyWords = Split(strInfo, "/",  - 1, vbTextCompare)
-	For Each strKeyword In strKeyWords
-		Do
-			intOrder = InStr(LCase(AutoTrim), LCase(strKeyword))
-			If intOrder = 0 Then
-				Exit Do
-			Else
-				AutoTrim = Left(AutoTrim, intOrder - 1) & Right(AutoTrim, Len(AutoTrim) - Len(strKeyword) - intOrder + 1)
-			End If
-		Loop
-	Next
 	With objRegExp
 		.Global = True
 		.IgnoreCase = True
+		.Pattern = strInfo
+		AutoTrim = .Replace(AutoTrim, "")
+		.Pattern = strLeavings
+		AutoTrim = .Replace(AutoTrim, "")
 		.Pattern = strPattern
 		AutoTrim = .Replace(AutoTrim, ".$4")
+		.Pattern = "\]\.\["
+		AutoTrim = .Replace(AutoTrim, "][")
 	End With
-	AutoTrim = Replace(AutoTrim, "].[", "][", vbTextCompare)
 End Function
 
 Private Sub SetClipboard(strText)
