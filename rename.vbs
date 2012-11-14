@@ -1,15 +1,15 @@
 Option Explicit
 'On Error Resume Next
 
-Const strApp = "Arnie's Episode Renamer 8.4"
+Const strApp = "Arnie's Episode Renamer 8.5"
 Dim objWSH, objFSO, objTextStream, strPath, strExt, strList, strLeavings, strPattern, strInfo
 Set objWSH = CreateObject("WScript.Shell")
 Set objFSO = CreateObject("Scripting.FileSystemObject")
-strExt = "/rm/rmvb/mkv/mp4/avi/mp3/tta/pdf/rar/zip/7z/ass/sub/"
+strExt = "/rm/rmvb/mkv/mp4/avi/mp3/tta/pdf/rar/zip/7z/ass/sub/txt/"
 strList = "\Rename.CSV"
 strLeavings = "(\.)?(\[|\()(&|_|\.|~|-)*(\)|\])"
 strPattern = "(\[|\()([A-F0-9]){6,8}(\)|\])\.(\S+)"
-strInfo = "GB|BIG5|JP|CN|\d{3,4}p|\d{3,4}x\d{3,4}|RV10|(x|H|H\.)26\d|(v|x)[2-4]|SumiSora|CASO|POPGO|EMD|Ktxp|MAGI_ATELIER|jump|(BT|ZM)PIG|DMG|DmzJ|www\.\S+\.(com|net|org)(\.cn)?|电影天堂|飘花电影|6v电影|&amp;|%26|_BF|_baofeng|XviD|DviX|\[(RMVB|MKV|MP4)\]|(BD|DVD)(Rip)?|flac|aac|ac3|_mp3"
+strInfo = "GB|BIG5|JP|CN|\d{3,4}p|\d{3,4}x\d{3,4}|RV10|(x|H|H\.)26\d|(v|x)[2-4]|SumiSora|CASO|POPGO|EMD|Ktxp|MAGI_ATELIER|SOSG|jump|(BT|ZM)PIG|DMG|DmzJ|www\.\S+\.(com|net|org)(\.cn)?|电影天堂|飘花电影|6v电影|&amp;|%26|_BF|_baofeng|XviD|DviX|\[(RMVB|MKV|MP4)\]|(BD|DVD|TV)(Rip)?|flac|aac|ac3|_mp3"
 
 List
 Rename
@@ -75,7 +75,28 @@ End Sub
 Private Function AutoTrim(strOriginal)
 	Dim objRegExp
 	Set objRegExp = New RegExp
-	AutoTrim = strOriginal
+	If InStr(AutoTrim, "%") = 0 Then
+		AutoTrim = strOriginal
+	Else
+		Dim intLoop, intChar, strChar
+		intLoop = 1
+		Do While intLoop <= Len(strOriginal)
+			strChar = Mid(strOriginal, intLoop, 1)
+			intLoop = intLoop + 1
+			If strChar = "%" Then
+				intChar = Val("&H" & Mid(strOriginal, intLoop, 2))
+				If intChar >= 128 Then
+					intChar = intChar * 256 + Val("&H" & Mid(strOriginal, intLoop + 3, 2))
+					intLoop = intLoop + 5
+				Else
+					intLoop = intLoop + 2
+				End If
+				AutoTrim = AutoTrim & Chr(intChar)
+			Else
+				AutoTrim = AutoTrim & strChar
+			End If
+		Loop
+	End If
 	With objRegExp
 		.Global = True
 		.IgnoreCase = True
@@ -132,19 +153,3 @@ Private Sub Message(intMsg)
 			End Select
 	End Select
 End Sub
-
-Private Function Hex2ASCII(strHex)
-	Dim strChr, intLoop, intChr
-	strHex = UCase(strHex)
-	For intLoop = 1 To Len(strHex)
-		strChr = Mid(strHex, Len(strHex) - intLoop + 1, 1)
-		Select Case strChr
-			Case "A", "B", "C", "D", "E", "F"
-				intChr = intChr + (Asc(strChr) - 65 + 10) * 16 ^ (intLoop - 1)
-			Case 1, 2, 3, 4, 5, 6, 7, 8, 9, 0
-				intChr = intChr + strChr * 16 ^ (intLoop - 1)
-			Case Else
-		End Select
-	Next
-	Hex2ASCII = ChrW(intChr)
-End Function
